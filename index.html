@@ -1,80 +1,885 @@
 <!DOCTYPE html>
-<html lang='en'>
+<html lang="en">
 <head>
-    <meta charset='UTF-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>React Website</title>
-    <script crossorigin src='https://unpkg.com/react@17/umd/react.development.js'></script>
-    <script crossorigin src='https://unpkg.com/react-dom@17/umd/react-dom.development.js'></script>
-    <script crossorigin src='https://unpkg.com/babel-standalone@6/babel.min.js'></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to bottom, #245CAF, #1F9AD5, #71A0CA);
-            color: white;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .navbar {
-            display: flex;
-            flex-direction: column;
-            position: absolute;
-            left: 40px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        .button {
-            margin-bottom: 2rem;
-            padding: 2.5rem 5rem;
-            font-size: 2rem;
-            color: #f8f8f8;
-            cursor: pointer;
-        }
-        .button:hover {
-            background-color: #001f3f;
-        }
-        .active {
-            border-left: 4px solid white;
-            padding-left: 0.5rem;
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
         }
     </style>
 </head>
-<body>
-    <div id='root'></div>
-    <script type='text/babel'>
-        const Navbar = ({ onSelect }) => {
-            const buttons = ['Home', 'About Us', 'Projects', 'Contacts'];
-            const [selected, setSelected] = React.useState('Home');
+<body class="p-4 md:p-8 flex flex-col items-center justify-center min-h-screen">
 
-            return (
-                <div className='navbar'>
-                    {buttons.map((button) => (
-                        <div
-                            key={button}
-                            onClick={() => {
-                                setSelected(button);
-                                onSelect(button);
-                            }}
-                            className={`button ${selected === button ? 'active' : ''}`}
-                        >
-                            {button}
+    <div class="bg-gray-800 p-6 rounded-lg shadow-2xl max-w-2xl w-full">
+        <!-- Game Title -->
+        <h1 class="text-4xl font-extrabold text-white text-center mb-6">Game</h1>
+
+        <!-- Character and Enemy Status -->
+        <div class="flex flex-col md:flex-row justify-between items-stretch gap-4 mb-6">
+            <!-- Player Status -->
+            <div id="player-status" class="bg-gray-700 p-4 rounded-lg flex-1 shadow-inner">
+                <h2 class="text-xl font-bold text-green-400 mb-2">You</h2>
+                <p id="player-level">Level: 1 (0/10 XP)</p>
+                <p id="player-health">HP: 20/20</p>
+                <p id="player-mana">Mana: 10/10</p>
+                <p id="player-attack-range">
+                    Attack: 1-5 (90%)
+                </p>
+                <!-- Player Stats with Skill Point Buttons -->
+                <div class="flex items-center gap-2">
+                    <p id="player-str" title="+1 to Min Dmg, +1 to Max Dmg, +2 HP">STR: 0</p>
+                    <button id="add-str" class="hidden text-white bg-blue-500 hover:bg-blue-600 rounded-full h-5 w-5 text-xs font-bold transition duration-200 leading-none">+</button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <p id="player-dex" title="+2% to Accuracy">DEX: 0</p>
+                    <button id="add-dex" class="hidden text-white bg-blue-500 hover:bg-blue-600 rounded-full h-5 w-5 text-xs font-bold transition duration-200 leading-none">+</button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <p id="player-rec" title="+3 HP, +1 Damage Reduction">REC: 0</p>
+                    <button id="add-rec" class="hidden text-white bg-blue-500 hover:bg-blue-600 rounded-full h-5 w-5 text-xs font-bold transition duration-200 leading-none">+</button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <p id="player-int" title="+2 Mana, +1 Heal per Spell Power">INT: 0</p>
+                    <button id="add-int" class="hidden text-white bg-blue-500 hover:bg-blue-600 rounded-full h-5 w-5 text-xs font-bold transition duration-200 leading-none">+</button>
+                </div>
+                <!-- Player Item Slots -->
+                <div class="mt-4 border-t border-gray-600 pt-4">
+                    <h3 class="text-lg font-semibold mb-2">Equipment</h3>
+                    <p id="helmet-slot" class="text-sm">Helmet: Empty</p>
+                    <p id="chest-slot" class="text-sm">Chest: Empty</p>
+                    <p id="boots-slot" class="text-sm">Boots: Empty</p>
+                    <p id="weapon-slot" class="text-sm">Weapon: Empty</p>
+                    <p id="shield-slot" class="text-sm">Shield: Empty</p>
+                </div>
+            </div>
+            <!-- Enemy Status -->
+            <div id="enemy-status" class="bg-gray-700 p-4 rounded-lg flex-1 shadow-inner">
+                <h2 class="text-xl font-bold text-red-400 mb-2">Enemy</h2>
+                <p id="enemy-level">Level: 1</p>
+                <p id="enemy-health">HP: 20/20</p>
+                <p id="enemy-mana">Mana: 10/10</p>
+                <p id="enemy-attack-range">
+                    Attack: 1-4 (90%)
+                </p>
+                <p id="enemy-str" title="+.5 to Min Dmg, +1 to Max Dmg, +2 HP">STR: 0</p>
+                <p id="enemy-dex" title="+2% to Accuracy">DEX: 0</p>
+                <p id="enemy-rec" title="+3 HP, +1 Damage Reduction">REC: 0</p>
+                <p id="enemy-int" title="No effect yet">INT: 0</p>
+            </div>
+        </div>
+
+        <!-- Game Log -->
+        <div id="game-log-container">
+            <div id="game-log" class="bg-gray-900 h-64 p-4 rounded-lg overflow-y-auto mb-4 text-sm text-gray-300">
+                <!-- This is now empty, message is generated by JS -->
+            </div>
+            <div id="victory-buttons" class="hidden">
+                <button id="next-enemy-button" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md w-full">
+                    Next Enemy
+                </button>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div id="action-buttons" class="grid grid-cols-2 gap-4">
+            <button id="attack-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                Attack
+            </button>
+            <button id="spells-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                Spells
+            </button>
+        </div>
+
+        <!-- Spells Menu -->
+        <div id="spells-menu" class="hidden">
+            <div id="spell-list" class="flex flex-col gap-2">
+                <!-- Spell buttons will be dynamically added here -->
+            </div>
+            <button id="back-button" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md w-full mt-4">
+                Back
+            </button>
+        </div>
+
+        <!-- Item Found Modal -->
+        <div id="item-found-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+            <div class="bg-gray-800 p-8 rounded-lg text-center shadow-2xl w-full max-w-sm">
+                <h2 class="text-3xl font-bold mb-4">Item Found!</h2>
+                <h3 id="item-name" class="text-xl font-bold mb-2 text-white"></h3>
+                <div id="item-stats" class="text-sm mb-4"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="equip-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                        Equip
+                    </button>
+                    <button id="discard-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                        Discard
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Permanent Reset Button and new Add Item button -->
+        <div class="mt-4 flex gap-4">
+            <button id="reset-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md w-full">
+                Reset Game
+            </button>
+            <button id="add-item-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md w-full">
+                Add Item
+            </button>
+        </div>
+    </div>
+
+    <!-- Game over overlay (for player loss only) -->
+    <div id="game-over-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-gray-800 p-8 rounded-lg text-center shadow-2xl">
+            <h2 id="game-over-text" class="text-3xl font-bold mb-4">You were defeated!</h2>
+            <button id="restart-button" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                Restart Game
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ===================================
+        // Global Game State and Definitions
+        // ===================================
+        let player = {};
+        let enemy = {};
+
+        // Define base values globally
+        const baseMinDamage = 2;
+        const baseMaxDamage = 5;
+        const baseHealth = 20;
+        const baseMana = 10;
+        const baseHealAmount = 5;
+
+        // Item rarities and colors
+        const rarities = {
+            'Normal': 'text-white',
+            'Magic': 'text-blue-400',
+            'Rare': 'text-yellow-400',
+            'Epic': 'text-purple-400'
+        };
+
+        const statAbbreviations = {
+            strength: 'STR',
+            dexterity: 'DEX',
+            recovery: 'REC',
+            intelligence: 'INT'
+        };
+
+        // Item stats by rarity (number of mods)
+        const itemStats = {
+            'Normal': { mods: { min: 0, max: 0 } },
+            'Magic': { mods: { min: 1, max: 2 } },
+            'Rare': { mods: { min: 3, max: 4 } },
+            'Epic': { mods: { min: 5, max: 6 } }
+        };
+
+        // Item Definitions (minimalist approach)
+        const helmetItems = [
+            "Leather Helmet,Evasion,dexterity:1",
+            "Iron Helm,Armour,strength:1"
+        ];
+        
+        // Item parsing and creation functions
+        function createItem(itemString, rarity, level) {
+            const parts = itemString.split(',');
+            const name = parts[0];
+            const type = parts[1];
+            const slot = 'helmet'; // All items in this array are helmets
+            
+            const implicitStats = {};
+            const explicitStats = {};
+            
+            const tier = 11 - Math.ceil(level / 5);
+            
+            // Re-calculate stat ranges based on the new formula
+            const statRangeMin = (10 - tier) * 3 + 1;
+            const statRangeMax = (10 - tier) * 3 + 3;
+            
+            // Parse implicit stats and scale with level
+            if (parts.length > 2) {
+                const implicitParts = parts[2].split(':');
+                const implicitStatName = implicitParts[0];
+                let baseImplicitValue;
+                
+                const levelTier = Math.ceil(level / 5);
+                if (levelTier === 1) baseImplicitValue = 1;
+                else if (levelTier === 2) baseImplicitValue = 3;
+                else if (levelTier === 3) baseImplicitValue = 5;
+                else baseImplicitValue = 7;
+
+                implicitStats[implicitStatName] = baseImplicitValue;
+            }
+            
+            // Roll for explicit stats
+            const modsToAllocate = itemStats[rarity].mods.min + Math.floor(Math.random() * (itemStats[rarity].mods.max - itemStats[rarity].mods.min + 1));
+            const availableStats = ['strength', 'dexterity', 'recovery', 'intelligence'];
+            
+            for (let i = 0; i < modsToAllocate; i++) {
+                const randomStatIndex = Math.floor(Math.random() * availableStats.length);
+                const randomStat = availableStats[randomStatIndex];
+                const statValue = statRangeMin + Math.floor(Math.random() * (statRangeMax - statRangeMin + 1));
+                
+                if (explicitStats[randomStat]) {
+                    explicitStats[randomStat] += statValue;
+                } else {
+                    explicitStats[randomStat] = statValue;
+                }
+            }
+
+            return {
+                name: name,
+                rarity: rarity,
+                type: type,
+                slot: slot,
+                implicitStats: implicitStats,
+                explicitStats: explicitStats,
+                tier: tier,
+                statRange: { min: statRangeMin, max: statRangeMax }
+            };
+        }
+
+        function rollRarity(playerLevel) {
+            const roll = Math.floor(Math.random() * 100);
+            if (roll > 90) return 'Epic';
+            if (roll > 70) return 'Rare';
+            if (roll > 40) return 'Magic';
+            return 'Normal';
+        }
+        
+        function getRandomItem(slot) {
+            let itemArray;
+            if (slot === 'helmet') {
+                itemArray = helmetItems;
+            } else {
+                return null;
+            }
+            const randomItemString = itemArray[Math.floor(Math.random() * itemArray.length)];
+            const rarity = rollRarity(player.level);
+            return createItem(randomItemString, rarity, player.level);
+        }
+
+        const spells = {
+            'Heal': {
+                name: 'Heal',
+                description: 'Heals you for a small amount.',
+                cost: 4,
+                effect: function(target) {
+                    const healAmount = baseHealAmount + target.intelligence;
+                    target.health += healAmount;
+                    if (target.health > target.maxHealth) {
+                        target.health = target.maxHealth;
+                    }
+                    const name = target === player ? 'Hero' : target.name;
+                    logMessage(`<span class="text-green-500 font-bold">${name}</span> casts Heal, recovering <span class="text-green-500 font-bold">${healAmount} HP.</span>`);
+                },
+                scaling: '+1 heal per Spell Power'
+            }
+        };
+
+        // ===================================
+        // DOM Elements
+        // ===================================
+        const playerHealthEl = document.getElementById('player-health');
+        const playerManaEl = document.getElementById('player-mana');
+        const playerAttackEl = document.getElementById('player-attack-range');
+        const playerStrEl = document.getElementById('player-str');
+        const playerDexEl = document.getElementById('player-dex');
+        const playerRecEl = document.getElementById('player-rec');
+        const playerIntEl = document.getElementById('player-int');
+        const playerLevelEl = document.getElementById('player-level');
+        const addStrButton = document.getElementById('add-str');
+        const addDexButton = document.getElementById('add-dex');
+        const addRecButton = document.getElementById('add-rec');
+        const addIntButton = document.getElementById('add-int');
+        const enemyHealthEl = document.getElementById('enemy-health');
+        const enemyManaEl = document.getElementById('enemy-mana');
+        const enemyAttackEl = document.getElementById('enemy-attack-range');
+        const enemyStrEl = document.getElementById('enemy-str');
+        const enemyDexEl = document.getElementById('enemy-dex');
+        const enemyRecEl = document.getElementById('enemy-rec');
+        const enemyIntEl = document.getElementById('enemy-int');
+        const enemyLevelEl = document.getElementById('enemy-level');
+        const gameLogEl = document.getElementById('game-log');
+        const attackButton = document.getElementById('attack-button');
+        const spellsButton = document.getElementById('spells-button');
+        const resetButton = document.getElementById('reset-button');
+        const addItemButton = document.getElementById('add-item-button');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const gameOverText = document.getElementById('game-over-text');
+        const victoryButtonsContainer = document.getElementById('victory-buttons');
+        const nextEnemyButton = document.getElementById('next-enemy-button');
+        const actionButtonsContainer = document.getElementById('action-buttons');
+        const spellsMenuContainer = document.getElementById('spells-menu');
+        const spellListEl = document.getElementById('spell-list');
+        const backButton = document.getElementById('back-button');
+        const restartButton = document.getElementById('restart-button');
+        const helmetSlotEl = document.getElementById('helmet-slot');
+        const chestSlotEl = document.getElementById('chest-slot');
+        const bootsSlotEl = document.getElementById('boots-slot');
+        const weaponSlotEl = document.getElementById('weapon-slot');
+        const shieldSlotEl = document.getElementById('shield-slot');
+        const itemFoundModal = document.getElementById('item-found-modal');
+        const itemNameEl = document.getElementById('item-name');
+        const itemStatsEl = document.getElementById('item-stats');
+        const equipButton = document.getElementById('equip-button');
+        const discardButton = document.getElementById('discard-button');
+        
+        // ===================================
+        // Core Game Functions
+        // ===================================
+        function logMessage(message) {
+            const p = document.createElement('p');
+            p.innerHTML = message;
+            gameLogEl.appendChild(p);
+            gameLogEl.scrollTop = gameLogEl.scrollHeight;
+        }
+
+        function checkLevelUp() {
+            if (player.xp >= player.xpToNextLevel) {
+                player.level++;
+                player.xp -= player.xpToNextLevel;
+                player.skillPoints += 2;
+                player.xpToNextLevel = player.level * 10;
+                logMessage(`<span class="text-green-500 font-bold">Hero</span> has reached Level ${player.level}! You gained 2 skill points!`);
+                
+                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
+                player.health = player.maxHealth;
+                player.maxMana = baseMana + (player.intelligence * 2);
+                player.mana = player.maxMana;
+
+                updateUI();
+            }
+        }
+
+        function createEnemy() {
+            const enemyLevel = player.level;
+            const enemyType = Math.random() < 0.5 ? 'Warrior' : 'Mage';
+            const baseHP = enemyType === 'Mage' ? 16 : baseHealth;
+            const enemyBaseMinDamage = enemyType === 'Mage' ? 1 : baseMinDamage;
+            const enemyBaseMaxDamage = enemyType === 'Mage' ? 4 : baseMaxDamage;
+
+            let enemyStrength = 0;
+            let enemyDexterity = 0;
+            let enemyRecovery = 0;
+            let enemyIntelligence = 0;
+            let enemyMana = baseMana;
+            let enemyMaxMana = baseMana;
+
+            const skillPointsToAllocate = (enemyLevel > 1) ? (enemyLevel - 1) * 2 : 0;
+            for (let i = 0; i < skillPointsToAllocate; i++) {
+                let randomStat;
+                if (enemyType === 'Mage') {
+                    randomStat = Math.floor(Math.random() * 3);
+                    switch (randomStat) {
+                        case 0: enemyDexterity++; break;
+                        case 1: enemyRecovery++; break;
+                        case 2: enemyIntelligence++; break;
+                    }
+                } else {
+                    randomStat = Math.floor(Math.random() * 3);
+                    switch (randomStat) {
+                        case 0: enemyStrength++; break;
+                        case 1: enemyDexterity++; break;
+                        case 2: enemyRecovery++; break;
+                    }
+                }
+            }
+
+            enemyMana = baseMana + (enemyIntelligence * 2);
+            enemyMaxMana = enemyMana;
+            
+            const newEnemy = {
+                name: `Skeleton ${enemyType}`,
+                strength: enemyStrength,
+                dexterity: enemyDexterity,
+                recovery: enemyRecovery,
+                intelligence: enemyIntelligence,
+                level: enemyLevel,
+                health: baseHP + (enemyStrength * 2) + (enemyRecovery * 3),
+                maxHealth: baseHP + (enemyStrength * 2) + (enemyRecovery * 3),
+                mana: enemyMana,
+                maxMana: enemyMaxMana,
+                baseMinDamage: enemyBaseMinDamage,
+                baseMaxDamage: enemyBaseMaxDamage,
+            };
+            return newEnemy;
+        }
+
+        function performAttack(attacker, defender) {
+            const accuracyChance = 90 + (attacker.dexterity - defender.dexterity) * 2 + (attacker.level - defender.level);
+            const roll = Math.floor(Math.random() * 100) + 1;
+
+            if (roll <= accuracyChance) {
+                const minDamage = attacker.baseMinDamage + attacker.strength;
+                const maxDamage = attacker.baseMaxDamage + attacker.strength;
+                let damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
+                
+                damage = Math.max(0, damage - defender.recovery);
+
+                defender.health -= damage;
+                if (defender.health < 0) defender.health = 0;
+                
+                const attackerName = attacker === player ? 'Hero' : attacker.name;
+                const defenderName = defender === player ? 'Hero' : defender.name;
+                const attackerColor = attacker === player ? 'text-green-500' : 'text-red-400';
+                const defenderColor = defender === player ? 'text-green-500' : 'text-red-400';
+                
+                logMessage(`<span class="${attackerColor} font-bold">${attackerName}</span> attacks <span class="${defenderColor} font-bold">${defenderName}</span> for <span class="text-orange-400 font-bold">${damage}</span> damage!`);
+            } else {
+                const attackerName = attacker === player ? 'Hero' : attacker.name;
+                const attackerColor = attacker === player ? 'text-green-500' : 'text-red-400';
+                logMessage(`<span class="${attackerColor} font-bold">${attackerName}</span>'s attack missed!`);
+            }
+        }
+
+        function castSpell(caster, spell, target) {
+            if (caster.mana >= spell.cost) {
+                caster.mana -= spell.cost;
+                spell.effect(target);
+                return true;
+            }
+            return false;
+        }
+
+        function handleVictory() {
+            logMessage(`<span class="text-green-500 font-bold">Hero</span> has defeated the <span class="text-red-400 font-bold">Enemy</span>! You gained 10 XP.`);
+            player.xp += 10;
+            checkLevelUp();
+            player.isTurn = false;
+            actionButtonsContainer.classList.add('hidden');
+            victoryButtonsContainer.classList.remove('hidden');
+            updateUI();
+            
+            const droppedItem = getRandomItem('helmet');
+            if (droppedItem) {
+                logMessage(`You found a new item!`);
+                showItemFoundModal(droppedItem);
+            }
+        }
+        
+        function equipItem(item) {
+            const slot = item.slot;
+            const oldItem = player.equipment[slot];
+            
+            if (oldItem) {
+                player.strength -= oldItem.implicitStats.strength || 0;
+                player.dexterity -= oldItem.implicitStats.dexterity || 0;
+                player.recovery -= oldItem.implicitStats.recovery || 0;
+                player.intelligence -= oldItem.implicitStats.intelligence || 0;
+                
+                player.strength -= oldItem.explicitStats.strength || 0;
+                player.dexterity -= oldItem.explicitStats.dexterity || 0;
+                player.recovery -= oldItem.explicitStats.recovery || 0;
+                player.intelligence -= oldItem.explicitStats.intelligence || 0;
+            }
+            
+            player.equipment[slot] = item;
+            player.strength += item.implicitStats.strength || 0;
+            player.dexterity += item.implicitStats.dexterity || 0;
+            player.recovery += item.implicitStats.recovery || 0;
+            player.intelligence += item.implicitStats.intelligence || 0;
+            
+            player.strength += item.explicitStats.strength || 0;
+            player.dexterity += item.explicitStats.dexterity || 0;
+            player.recovery += item.explicitStats.recovery || 0;
+            player.intelligence += item.explicitStats.intelligence || 0;
+            
+            player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
+            player.health = player.maxHealth;
+            player.maxMana = baseMana + (player.intelligence * 2);
+            player.mana = player.maxMana;
+            
+            logMessage(`You equipped the <span class="${rarities[item.rarity]}">${item.name}</span>!`);
+            updateUI();
+        }
+
+        function handleDefeat() {
+            logMessage(`<span class="text-green-500 font-bold">Hero</span> was defeated! The <span class="text-red-400 font-bold">Enemy</span> has triumphed.`);
+            gameOverModal.classList.remove('hidden');
+            player.isTurn = false;
+            updateUI();
+        }
+
+        function checkGameState() {
+            if (player.health <= 0) {
+                handleDefeat();
+                return true;
+            } else if (enemy.health <= 0) {
+                handleVictory();
+                return true;
+            }
+            return false;
+        }
+
+        function enemyTurn() {
+            if (checkGameState()) return;
+            
+            player.isTurn = false;
+            updateUI();
+
+            setTimeout(() => {
+                if (enemy.name.includes('Mage') && enemy.health < enemy.maxHealth * 0.5 && enemy.mana >= spells['Heal'].cost) {
+                    const healRoll = Math.floor(Math.random() * 4);
+                    if (healRoll === 0) {
+                        castSpell(enemy, spells['Heal'], enemy);
+                    } else {
+                        performAttack(enemy, player);
+                    }
+                } else {
+                    performAttack(enemy, player);
+                }
+                
+                updateUI();
+
+                if (!checkGameState()) {
+                    player.isTurn = true;
+                    updateUI();
+                }
+            }, 1000);
+        }
+
+        // ===================================
+        // UI Functions
+        // ===================================
+        function renderSpellsMenu() {
+            spellListEl.innerHTML = '';
+            Object.values(player.spells).forEach(spell => {
+                const spellButton = document.createElement('button');
+                spellButton.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'font-bold', 'py-3', 'px-6', 'rounded-lg', 'transition', 'duration-300', 'ease-in-out', 'transform', 'hover:scale-105', 'shadow-md', 'w-full', 'text-left');
+                
+                const healAmount = baseHealAmount + player.intelligence;
+                spellButton.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-lg">${spell.name}</p>
+                            <p class="text-sm text-gray-200">Heals: ${healAmount} HP</p>
                         </div>
-                    ))}
-                </div>
-            );
-        };
+                        <div class="text-right">
+                            <p class="text-xs text-gray-200">Cost: ${spell.cost} Mana</p>
+                            <p class="text-xs text-gray-200">${spell.scaling}</p>
+                        </div>
+                    </div>
+                `;
 
-        const App = () => {
-            const [page, setPage] = React.useState('Home');
-            return (
-                <div>
-                    <Navbar onSelect={setPage} />
-                </div>
-            );
-        };
+                if (player.mana < spell.cost || !player.isTurn) {
+                    spellButton.disabled = true;
+                    spellButton.classList.add('opacity-50', 'cursor-not-allowed');
+                }
 
-        ReactDOM.render(<App />, document.getElementById('root'));
+                spellButton.addEventListener('click', () => {
+                    if (castSpell(player, spell, player)) {
+                        updateUI();
+                        if (!checkGameState()) {
+                            enemyTurn();
+                        }
+                    } else {
+                        logMessage("You don't have enough mana to cast that spell!");
+                    }
+                    hideSpellsMenu();
+                });
+                spellListEl.appendChild(spellButton);
+            });
+        }
+
+        function showSpellsMenu() {
+            actionButtonsContainer.classList.add('hidden');
+            spellsMenuContainer.classList.remove('hidden');
+            renderSpellsMenu();
+        }
+
+        function hideSpellsMenu() {
+            spellsMenuContainer.classList.add('hidden');
+            actionButtonsContainer.classList.remove('hidden');
+        }
+
+        function showItemFoundModal(item) {
+            itemNameEl.textContent = item.name;
+            itemNameEl.className = `text-xl font-bold mb-2 ${rarities[item.rarity]}`;
+            
+            let statsHtml = '';
+            const implicitMods = Object.keys(item.implicitStats).length;
+            const explicitMods = Object.keys(item.explicitStats).length;
+            
+            if (implicitMods > 0) {
+                statsHtml += `<p class="font-bold">Implicit Modifiers:</p>`;
+                for (const stat in item.implicitStats) {
+                    statsHtml += `<p>${statAbbreviations[stat]} +${item.implicitStats[stat]}</p>`;
+                }
+            }
+            if (explicitMods > 0) {
+                // Now correctly checks for statRange before trying to access it
+                if (item.statRange) {
+                    statsHtml += `<p class="font-bold mt-2">Explicit Modifiers: <span class="text-gray-400">(T${item.tier} ${item.statRange.min}-${item.statRange.max})</span></p>`;
+                } else {
+                    statsHtml += `<p class="font-bold mt-2">Explicit Modifiers:</p>`;
+                }
+                for (const stat in item.explicitStats) {
+                    statsHtml += `<p>${statAbbreviations[stat]} +${item.explicitStats[stat]}</p>`;
+                }
+            }
+            itemStatsEl.innerHTML = statsHtml;
+            
+            equipButton.onclick = () => {
+                equipItem(item);
+                itemFoundModal.classList.add('hidden');
+                victoryButtonsContainer.classList.remove('hidden');
+            };
+            
+            discardButton.onclick = () => {
+                logMessage(`You discarded the <span class="${rarities[item.rarity]}">${item.name}</span>.`);
+                itemFoundModal.classList.add('hidden');
+                victoryButtonsContainer.classList.remove('hidden');
+                updateUI();
+            };
+            
+            itemFoundModal.classList.remove('hidden');
+        }
+
+        function updateUI() {
+            playerHealthEl.textContent = `HP: ${player.health}/${player.maxHealth}`;
+            playerManaEl.textContent = `Mana: ${player.mana}/${player.maxMana}`;
+            playerStrEl.textContent = `STR: ${player.strength}`;
+            playerDexEl.textContent = `DEX: ${player.dexterity}`;
+            playerRecEl.textContent = `REC: ${player.recovery}`;
+            playerIntEl.textContent = `INT: ${player.intelligence}`;
+            playerLevelEl.textContent = `Level: ${player.level} (${player.xp}/${player.xpToNextLevel} XP)`;
+            
+            if (player.skillPoints > 0) {
+                addStrButton.classList.remove('hidden');
+                addDexButton.classList.remove('hidden');
+                addRecButton.classList.remove('hidden');
+                addIntButton.classList.remove('hidden');
+            } else {
+                addStrButton.classList.add('hidden');
+                addDexButton.classList.add('hidden');
+                addRecButton.classList.add('hidden');
+                addIntButton.classList.add('hidden');
+            }
+
+            const playerMinDamage = player.baseMinDamage + player.strength;
+            const playerMaxDamage = player.baseMaxDamage + player.strength;
+            const playerAccuracy = 90 + (player.dexterity - enemy.dexterity) * 2 + (player.level - enemy.level);
+            playerAttackEl.textContent = `Attack: ${playerMinDamage}-${playerMaxDamage} (${playerAccuracy}%)`;
+
+            document.querySelector('#enemy-status h2').textContent = enemy.name;
+            enemyHealthEl.textContent = `HP: ${enemy.health}/${enemy.maxHealth}`;
+            enemyManaEl.textContent = `Mana: ${enemy.mana}/${enemy.maxMana}`;
+            enemyStrEl.textContent = `STR: ${enemy.strength}`;
+            enemyDexEl.textContent = `DEX: ${enemy.dexterity}`;
+            enemyRecEl.textContent = `REC: ${enemy.recovery}`;
+            enemyIntEl.textContent = `INT: ${enemy.intelligence}`;
+            enemyLevelEl.textContent = `Level: ${enemy.level}`;
+            
+            const enemyMinDamage = enemy.baseMinDamage + enemy.strength;
+            const enemyMaxDamage = enemy.baseMaxDamage + enemy.strength;
+            const enemyAccuracy = 90 + (enemy.dexterity - player.dexterity) * 2 + (enemy.level - player.level);
+            enemyAttackEl.textContent = `Attack: ${enemyMinDamage}-${enemyMaxDamage} (${enemyAccuracy}%)`;
+
+            attackButton.disabled = !player.isTurn;
+            spellsButton.disabled = !player.isTurn;
+
+            if (player.health < player.maxHealth / 4) {
+                playerHealthEl.classList.remove('text-green-400', 'text-yellow-400');
+                playerHealthEl.classList.add('text-red-400');
+            } else if (player.health < player.maxHealth / 2) {
+                playerHealthEl.classList.remove('text-red-400', 'text-green-400');
+                playerHealthEl.classList.add('text-yellow-400');
+            } else {
+                playerHealthEl.classList.remove('text-red-400', 'text-yellow-400');
+                playerHealthEl.classList.add('text-green-400');
+            }
+
+            if (player.mana < player.maxMana / 4) {
+                playerManaEl.classList.remove('text-blue-400', 'text-yellow-400');
+                playerManaEl.classList.add('text-red-400');
+            } else if (player.mana < player.maxMana / 2) {
+                playerManaEl.classList.remove('text-red-400', 'text-blue-400');
+                playerManaEl.classList.add('text-yellow-400');
+            } else {
+                playerManaEl.classList.remove('text-red-400', 'text-yellow-400');
+                playerManaEl.classList.add('text-blue-400');
+            }
+
+            if (enemy.health < enemy.maxHealth / 4) {
+                enemyHealthEl.classList.remove('text-green-400', 'text-yellow-400');
+                enemyHealthEl.classList.add('text-red-400');
+            } else if (enemy.health < enemy.maxHealth / 2) {
+                enemyHealthEl.classList.remove('text-red-400', 'text-green-400');
+                enemyHealthEl.classList.add('text-yellow-400');
+            } else {
+                enemyHealthEl.classList.remove('text-red-400', 'text-yellow-400');
+                enemyHealthEl.classList.add('text-red-400');
+            }
+            
+            const getItemTooltipText = (stats, label, itemTier, itemStats) => {
+                let tooltip = '';
+                for (const stat in stats) {
+                    tooltip += `${statAbbreviations[stat]} +${stats[stat]}\n`;
+                }
+                return tooltip;
+            };
+
+            const getItemText = (item) => {
+                if (!item) return 'Empty';
+                let tooltip = '';
+                const implicitMods = getItemTooltipText(item.implicitStats, 'Implicit', item.tier, itemStats[item.rarity]);
+                const explicitMods = getItemTooltipText(item.explicitStats, 'Explicit', item.tier, itemStats[item.rarity]);
+
+                if (implicitMods.length > 0) {
+                    tooltip += `Implicit Modifiers:\n${implicitMods}`;
+                }
+                if (explicitMods.length > 0) {
+                    tooltip += `Explicit Modifiers: (T${item.tier} ${item.statRange.min}-${item.statRange.max})\n${explicitMods}`;
+                }
+                return `<span class="${rarities[item.rarity]} hover:underline cursor-pointer" title="${tooltip.trim()}">${item.name}</span>`;
+            };
+
+            helmetSlotEl.innerHTML = `Helmet: ${getItemText(player.equipment.helmet)}`;
+            chestSlotEl.innerHTML = `Chest: ${getItemText(player.equipment.chest)}`;
+            bootsSlotEl.innerHTML = `Boots: ${getItemText(player.equipment.boots)}`;
+            weaponSlotEl.innerHTML = `Weapon: ${getItemText(player.equipment.weapon)}`;
+            shieldSlotEl.innerHTML = `Shield: ${getItemText(player.equipment.shield)}`;
+        }
+        
+        function getTooltipText(item) {
+            let tooltip = '';
+            for (const stat in item.stats) {
+                tooltip += `${stat}: +${item.stats[stat]}\n`;
+            }
+            return tooltip.trim();
+        }
+
+        function resetGame() {
+            player = {
+                name: "Hero",
+                strength: 0,
+                dexterity: 0,
+                recovery: 0,
+                intelligence: 0,
+                level: 1,
+                xp: 0,
+                xpToNextLevel: 10,
+                skillPoints: 0,
+                isTurn: true,
+                spells: spells,
+                baseMinDamage: baseMinDamage,
+                baseMaxDamage: baseMaxDamage,
+                equipment: {
+                    helmet: null,
+                    chest: null,
+                    boots: null,
+                    weapon: null,
+                    shield: null,
+                }
+            };
+            player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
+            player.health = player.maxHealth;
+            player.maxMana = baseMana + (player.intelligence * 2);
+            player.mana = player.maxMana;
+            
+            enemy = createEnemy();
+            
+            gameLogEl.innerHTML = '';
+            logMessage('<p>Welcome, brave <span class="text-green-500 font-bold">Hero</span>. An <span class="text-red-400 font-bold">Enemy</span> stands in your way!</p>');
+            gameOverModal.classList.add('hidden');
+            actionButtonsContainer.classList.remove('hidden');
+            victoryButtonsContainer.classList.add('hidden');
+            player.isTurn = true;
+            updateUI();
+        }
+
+        function startNextBattle() {
+            player.health = player.maxHealth;
+            player.mana = player.maxMana;
+            enemy = createEnemy();
+
+            gameLogEl.innerHTML = '';
+            logMessage('<p>A new <span class="text-red-400 font-bold">enemy</span> appears!</p>');
+            actionButtonsContainer.classList.remove('hidden');
+            victoryButtonsContainer.classList.add('hidden');
+            player.isTurn = true;
+            updateUI();
+            logMessage("The battle begins!");
+        }
+
+        function addItemForTesting() {
+            const droppedItem = getRandomItem('helmet');
+            if (droppedItem) {
+                logMessage(`You found a new item!`);
+                showItemFoundModal(droppedItem);
+            }
+        }
+
+        function addStrength() {
+            if (player.skillPoints > 0) {
+                player.strength++;
+                player.skillPoints--;
+                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
+                player.health = player.maxHealth;
+                updateUI();
+            }
+        }
+
+        function addDexterity() {
+            if (player.skillPoints > 0) {
+                player.dexterity++;
+                player.skillPoints--;
+                updateUI();
+            }
+        }
+        
+        function addRecovery() {
+            if (player.skillPoints > 0) {
+                player.recovery++;
+                player.skillPoints--;
+                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
+                player.health = player.maxHealth;
+                updateUI();
+            }
+        }
+
+        function addIntelligence() {
+            if (player.skillPoints > 0) {
+                player.intelligence++;
+                player.skillPoints--;
+                player.maxMana = baseMana + (player.intelligence * 2);
+                player.mana = player.maxMana;
+                updateUI();
+            }
+        }
+
+        attackButton.addEventListener('click', () => {
+            if (!player.isTurn) return;
+            performAttack(player, enemy);
+            updateUI();
+            if (!checkGameState()) {
+                enemyTurn();
+            }
+        });
+
+        spellsButton.addEventListener('click', showSpellsMenu);
+        backButton.addEventListener('click', hideSpellsMenu);
+
+        addStrButton.addEventListener('click', addStrength);
+        addDexButton.addEventListener('click', addDexterity);
+        addRecButton.addEventListener('click', addRecovery);
+        addIntButton.addEventListener('click', addIntelligence);
+
+        nextEnemyButton.addEventListener('click', startNextBattle);
+        resetButton.addEventListener('click', resetGame);
+        restartButton.addEventListener('click', resetGame);
+        addItemButton.addEventListener('click', addItemForTesting);
+
+        window.onload = () => {
+            resetGame();
+        };
     </script>
 </body>
 </html>
