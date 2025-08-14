@@ -169,7 +169,9 @@
             strength: 'STR',
             dexterity: 'DEX',
             recovery: 'REC',
-            intelligence: 'INT'
+            intelligence: 'INT',
+            mana_regen: 'M_REG',
+            hp_regen: 'H_REG'
         };
 
         // Item stats by rarity (number of mods)
@@ -198,9 +200,14 @@
             
             const tier = 11 - Math.ceil(level / 5);
             
-            // Re-calculate stat ranges based on the new formula
-            const statRangeMin = (10 - tier) * 3 + 1;
-            const statRangeMax = (10 - tier) * 3 + 3;
+            const tierStatRanges = {
+                10: { min: 1, max: 3 },
+                9: { min: 4, max: 6 },
+                8: { min: 7, max: 9 },
+                // ... add more tiers as needed
+            };
+            
+            const statRange = tierStatRanges[tier] || { min: 1, max: 1 };
             
             // Parse implicit stats and scale with level
             if (parts.length > 2) {
@@ -219,18 +226,17 @@
             
             // Roll for explicit stats
             const modsToAllocate = itemStats[rarity].mods.min + Math.floor(Math.random() * (itemStats[rarity].mods.max - itemStats[rarity].mods.min + 1));
-            const availableStats = ['strength', 'dexterity', 'recovery', 'intelligence'];
+            let availableStats = ['strength', 'dexterity', 'recovery', 'intelligence', 'mana_regen', 'hp_regen'];
             
             for (let i = 0; i < modsToAllocate; i++) {
+                if (availableStats.length === 0) break;
                 const randomStatIndex = Math.floor(Math.random() * availableStats.length);
                 const randomStat = availableStats[randomStatIndex];
-                const statValue = statRangeMin + Math.floor(Math.random() * (statRangeMax - statRangeMin + 1));
+                availableStats.splice(randomStatIndex, 1);
                 
-                if (explicitStats[randomStat]) {
-                    explicitStats[randomStat] += statValue;
-                } else {
-                    explicitStats[randomStat] = statValue;
-                }
+                const statValue = statRange.min + Math.floor(Math.random() * (statRange.max - statRange.min + 1));
+                
+                explicitStats[randomStat] = statValue;
             }
 
             return {
@@ -241,7 +247,7 @@
                 implicitStats: implicitStats,
                 explicitStats: explicitStats,
                 tier: tier,
-                statRange: { min: statRangeMin, max: statRangeMax }
+                statRange: statRange
             };
         }
 
@@ -614,15 +620,11 @@
                 }
             }
             if (explicitMods > 0) {
-                // Now correctly checks for statRange before trying to access it
-                if (item.statRange) {
-                    statsHtml += `<p class="font-bold mt-2">Explicit Modifiers: <span class="text-gray-400">(T${item.tier} ${item.statRange.min}-${item.statRange.max})</span></p>`;
-                } else {
-                    statsHtml += `<p class="font-bold mt-2">Explicit Modifiers:</p>`;
-                }
-                for (const stat in item.explicitStats) {
-                    statsHtml += `<p>${statAbbreviations[stat]} +${item.explicitStats[stat]}</p>`;
-                }
+                statsHtml += `<p class="font-bold mt-2">Explicit Modifiers:</p>`;
+                const explicitModsHtml = Object.keys(item.explicitStats).map(stat => {
+                    return `<p>${statAbbreviations[stat]} +${item.explicitStats[stat]} (T${item.tier} ${item.statRange.min}-${item.statRange.max})</p>`;
+                }).join('');
+                statsHtml += explicitModsHtml;
             }
             itemStatsEl.innerHTML = statsHtml;
             
@@ -718,10 +720,14 @@
                 enemyHealthEl.classList.add('text-red-400');
             }
             
-            const getItemTooltipText = (stats, label, itemTier, itemStats) => {
+            const getItemTooltipText = (stats, item) => {
                 let tooltip = '';
                 for (const stat in stats) {
-                    tooltip += `${statAbbreviations[stat]} +${stats[stat]}\n`;
+                    tooltip += `${statAbbreviations[stat]} +${stats[stat]}`;
+                    if (item.explicitStats[stat]) {
+                        tooltip += ` (T${item.tier} ${item.statRange.min}-${item.statRange.max})`;
+                    }
+                    tooltip += `\n`;
                 }
                 return tooltip;
             };
@@ -729,14 +735,14 @@
             const getItemText = (item) => {
                 if (!item) return 'Empty';
                 let tooltip = '';
-                const implicitMods = getItemTooltipText(item.implicitStats, 'Implicit', item.tier, itemStats[item.rarity]);
-                const explicitMods = getItemTooltipText(item.explicitStats, 'Explicit', item.tier, itemStats[item.rarity]);
+                const implicitMods = getItemTooltipText(item.implicitStats, item);
+                const explicitMods = getItemTooltipText(item.explicitStats, item);
 
                 if (implicitMods.length > 0) {
                     tooltip += `Implicit Modifiers:\n${implicitMods}`;
                 }
                 if (explicitMods.length > 0) {
-                    tooltip += `Explicit Modifiers: (T${item.tier} ${item.statRange.min}-${item.statRange.max})\n${explicitMods}`;
+                    tooltip += `Explicit Modifiers:\n${explicitMods}`;
                 }
                 return `<span class="${rarities[item.rarity]} hover:underline cursor-pointer" title="${tooltip.trim()}">${item.name}</span>`;
             };
