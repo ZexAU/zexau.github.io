@@ -40,13 +40,15 @@
                     <button id="add-dex" class="hidden text-white bg-blue-500 hover:bg-blue-600 rounded-full h-5 w-5 text-xs font-bold transition duration-200 leading-none">+</button>
                 </div>
                 <div class="flex items-center gap-2">
-                    <p id="player-rec" title="+3 HP, +1 Damage Reduction">REC: 0</p>
+                    <p id="player-rec" title="+3 HP">REC: 0</p>
                     <button id="add-rec" class="hidden text-white bg-blue-500 hover:bg-blue-600 rounded-full h-5 w-5 text-xs font-bold transition duration-200 leading-none">+</button>
                 </div>
                 <div class="flex items-center gap-2">
                     <p id="player-int" title="+2 Mana, +1 Heal per Spell Power">INT: 0</p>
                     <button id="add-int" class="hidden text-white bg-blue-500 hover:bg-blue-600 rounded-full h-5 w-5 text-xs font-bold transition duration-200 leading-none">+</button>
                 </div>
+                <!-- New line for Damage Reduction -->
+                <p id="player-dr" class="text-sm mt-2">DR: 0</p>
                 <!-- Player Item Slots -->
                 <div class="mt-4 border-t border-gray-600 pt-4">
                     <h3 class="text-lg font-semibold mb-2">Equipment</h3>
@@ -66,10 +68,12 @@
                 <p id="enemy-attack-range">
                     Attack: 1-4 (90%)
                 </p>
-                <p id="enemy-str" title="+.5 to Min Dmg, +1 to Max Dmg, +2 HP">STR: 0</p>
+                <p id="enemy-str" title="+1 to Min Dmg, +1 to Max Dmg, +2 HP">STR: 0</p>
                 <p id="enemy-dex" title="+2% to Accuracy">DEX: 0</p>
-                <p id="enemy-rec" title="+3 HP, +1 Damage Reduction">REC: 0</p>
+                <p id="enemy-rec" title="+3 HP">REC: 0</p>
                 <p id="enemy-int" title="No effect yet">INT: 0</p>
+                <!-- New line for Damage Reduction -->
+                <p id="enemy-dr" class="text-sm mt-2">DR: 0</p>
             </div>
         </div>
 
@@ -149,6 +153,8 @@
         // ===================================
         let player = {};
         let enemy = {};
+        // The enemy level is now a separate variable that increments with each new battle.
+        let currentEnemyLevel = 1;
 
         // Define base values globally
         const baseMinDamage = 2;
@@ -170,8 +176,10 @@
             dexterity: 'DEX',
             recovery: 'REC',
             intelligence: 'INT',
+            damage_reduction: 'DR', // Added new abbreviation for damage reduction
             mana_regen: 'M_REG',
-            hp_regen: 'H_REG'
+            hp_regen: 'H_REG',
+            health: 'HP', // New abbreviation for health
         };
 
         // Item stats by rarity (number of mods)
@@ -182,51 +190,110 @@
             'Epic': { mods: { min: 5, max: 6 } }
         };
 
-        // Item Definitions (minimalist approach)
+        // A new, explicit data structure for stat tier ranges
+        const statTierRanges = {
+            // Tier 10 ranges (as requested)
+            strength: {
+                10: { min: 1, max: 3 }
+            },
+            dexterity: {
+                10: { min: 1, max: 3 }
+            },
+            recovery: {
+                10: { min: 1, max: 3 }
+            },
+            intelligence: {
+                10: { min: 1, max: 3 }
+            },
+            mana_regen: {
+                10: { min: 1, max: 3 }
+            },
+            hp_regen: {
+                10: { min: 1, max: 3 }
+            },
+            health: {
+                10: { min: 2, max: 5 }
+            },
+            damage_reduction: {
+                10: { min: 1, max: 2 }
+            },
+            // Add other tiers (9, 8, etc.) here as needed
+        };
+
+
+        // Item Definitions (expanded to include all slots)
         const helmetItems = [
             "Leather Helmet,Evasion,dexterity:1",
             "Iron Helm,Armour,strength:1"
         ];
+        const chestItems = [
+            "Leather Chestpiece,Evasion,dexterity:1",
+            "Iron Breastplate,Armour,strength:1"
+        ];
+        const bootsItems = [
+            "Leather Boots,Evasion,dexterity:1",
+            "Iron Greaves,Armour,strength:1"
+        ];
+        const weaponItems = [
+            "Rusty Sword,Physical,strength:2",
+            "Old Staff,Magic,intelligence:2"
+        ];
+        const shieldItems = [
+            // The shield now provides Damage Reduction directly, instead of Recovery
+            "Wooden Shield,Defence,damage_reduction:2"
+        ];
         
+        // A master list of all item types by slot
+        const itemDefinitions = {
+            helmet: helmetItems,
+            chest: chestItems,
+            boots: bootsItems,
+            weapon: weaponItems,
+            shield: shieldItems,
+        };
+
         // Item parsing and creation functions
-        function createItem(itemString, rarity, level) {
+        function createItem(itemString, rarity, level, slot) {
             const parts = itemString.split(',');
             const name = parts[0];
             const type = parts[1];
-            const slot = 'helmet'; // All items in this array are helmets
             
             const implicitStats = {};
             const explicitStats = {};
             
             const tier = 11 - Math.ceil(level / 5);
             
-            const tierStatRanges = {
-                10: { min: 1, max: 3 },
-                9: { min: 4, max: 6 },
-                8: { min: 7, max: 9 },
-                // ... add more tiers as needed
+            // Get the correct stat range based on the stat name and tier
+            const getStatRange = (statName, tier) => {
+                const statRanges = statTierRanges[statName];
+                if (statRanges && statRanges[tier]) {
+                    return statRanges[tier];
+                }
+                return { min: 1, max: 1 }; // Fallback for undefined tiers or stats
             };
-            
-            const statRange = tierStatRanges[tier] || { min: 1, max: 1 };
             
             // Parse implicit stats and scale with level
             if (parts.length > 2) {
                 const implicitParts = parts[2].split(':');
                 const implicitStatName = implicitParts[0];
-                let baseImplicitValue;
-                
-                const levelTier = Math.ceil(level / 5);
-                if (levelTier === 1) baseImplicitValue = 1;
-                else if (levelTier === 2) baseImplicitValue = 3;
-                else if (levelTier === 3) baseImplicitValue = 5;
-                else baseImplicitValue = 7;
+                let baseImplicitValue = parseInt(implicitParts[1]);
 
-                implicitStats[implicitStatName] = baseImplicitValue;
+                // Special handling for implicit stats like health on items
+                if (implicitStatName === 'health') {
+                    implicitStats[implicitStatName] = baseImplicitValue;
+                } else {
+                    const levelTier = Math.ceil(level / 5);
+                    if (levelTier === 1) baseImplicitValue = 1;
+                    else if (levelTier === 2) baseImplicitValue = 3;
+                    else if (levelTier === 3) baseImplicitValue = 5;
+                    else baseImplicitValue = 7;
+                    implicitStats[implicitStatName] = baseImplicitValue;
+                }
             }
             
             // Roll for explicit stats
             const modsToAllocate = itemStats[rarity].mods.min + Math.floor(Math.random() * (itemStats[rarity].mods.max - itemStats[rarity].mods.min + 1));
-            let availableStats = ['strength', 'dexterity', 'recovery', 'intelligence', 'mana_regen', 'hp_regen'];
+            let availableStats = ['strength', 'dexterity', 'recovery', 'intelligence', 'damage_reduction', 'mana_regen', 'hp_regen', 'health'];
             
             for (let i = 0; i < modsToAllocate; i++) {
                 if (availableStats.length === 0) break;
@@ -234,6 +301,8 @@
                 const randomStat = availableStats[randomStatIndex];
                 availableStats.splice(randomStatIndex, 1);
                 
+                // Use the stat-specific tier ranges
+                const statRange = getStatRange(randomStat, tier);
                 const statValue = statRange.min + Math.floor(Math.random() * (statRange.max - statRange.min + 1));
                 
                 explicitStats[randomStat] = statValue;
@@ -251,7 +320,7 @@
             };
         }
 
-        function rollRarity(playerLevel) {
+        function rollRarity(level) {
             const roll = Math.floor(Math.random() * 100);
             if (roll > 90) return 'Epic';
             if (roll > 70) return 'Rare';
@@ -259,16 +328,14 @@
             return 'Normal';
         }
         
-        function getRandomItem(slot) {
-            let itemArray;
-            if (slot === 'helmet') {
-                itemArray = helmetItems;
-            } else {
-                return null;
-            }
+        // This function now randomly selects a slot and an item from the master list
+        function getRandomItem() {
+            const slots = Object.keys(itemDefinitions);
+            const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+            const itemArray = itemDefinitions[randomSlot];
             const randomItemString = itemArray[Math.floor(Math.random() * itemArray.length)];
-            const rarity = rollRarity(player.level);
-            return createItem(randomItemString, rarity, player.level);
+            const rarity = rollRarity(enemy.level);
+            return createItem(randomItemString, rarity, enemy.level, randomSlot);
         }
 
         const spells = {
@@ -300,6 +367,7 @@
         const playerRecEl = document.getElementById('player-rec');
         const playerIntEl = document.getElementById('player-int');
         const playerLevelEl = document.getElementById('player-level');
+        const playerDrEl = document.getElementById('player-dr'); // Added new DR element
         const addStrButton = document.getElementById('add-str');
         const addDexButton = document.getElementById('add-dex');
         const addRecButton = document.getElementById('add-rec');
@@ -312,6 +380,7 @@
         const enemyRecEl = document.getElementById('enemy-rec');
         const enemyIntEl = document.getElementById('enemy-int');
         const enemyLevelEl = document.getElementById('enemy-level');
+        const enemyDrEl = document.getElementById('enemy-dr'); // Added new DR element
         const gameLogEl = document.getElementById('game-log');
         const attackButton = document.getElementById('attack-button');
         const spellsButton = document.getElementById('spells-button');
@@ -364,8 +433,8 @@
             }
         }
 
-        function createEnemy() {
-            const enemyLevel = player.level;
+        // This function now takes the enemy's level as an argument
+        function createEnemy(enemyLevel) {
             const enemyType = Math.random() < 0.5 ? 'Warrior' : 'Mage';
             const baseHP = enemyType === 'Mage' ? 16 : baseHealth;
             const enemyBaseMinDamage = enemyType === 'Mage' ? 1 : baseMinDamage;
@@ -375,6 +444,7 @@
             let enemyDexterity = 0;
             let enemyRecovery = 0;
             let enemyIntelligence = 0;
+            let enemyDamageReduction = 0; // New stat for the enemy
             let enemyMana = baseMana;
             let enemyMaxMana = baseMana;
 
@@ -407,6 +477,7 @@
                 dexterity: enemyDexterity,
                 recovery: enemyRecovery,
                 intelligence: enemyIntelligence,
+                damageReduction: enemyDamageReduction, // Initialized new stat
                 level: enemyLevel,
                 health: baseHP + (enemyStrength * 2) + (enemyRecovery * 3),
                 maxHealth: baseHP + (enemyStrength * 2) + (enemyRecovery * 3),
@@ -427,7 +498,8 @@
                 const maxDamage = attacker.baseMaxDamage + attacker.strength;
                 let damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
                 
-                damage = Math.max(0, damage - defender.recovery);
+                // Damage is now reduced by the new damageReduction stat
+                damage = Math.max(0, damage - defender.damageReduction);
 
                 defender.health -= damage;
                 if (defender.health < 0) defender.health = 0;
@@ -463,7 +535,8 @@
             victoryButtonsContainer.classList.remove('hidden');
             updateUI();
             
-            const droppedItem = getRandomItem('helmet');
+            // Item generation is now based on the enemy's level
+            const droppedItem = getRandomItem();
             if (droppedItem) {
                 logMessage(`You found a new item!`);
                 showItemFoundModal(droppedItem);
@@ -479,11 +552,15 @@
                 player.dexterity -= oldItem.implicitStats.dexterity || 0;
                 player.recovery -= oldItem.implicitStats.recovery || 0;
                 player.intelligence -= oldItem.implicitStats.intelligence || 0;
+                player.damageReduction -= oldItem.implicitStats.damage_reduction || 0; // Removing old item's DR
+                player.health -= oldItem.implicitStats.health || 0; // Removing old item's health stat
                 
                 player.strength -= oldItem.explicitStats.strength || 0;
                 player.dexterity -= oldItem.explicitStats.dexterity || 0;
                 player.recovery -= oldItem.explicitStats.recovery || 0;
                 player.intelligence -= oldItem.explicitStats.intelligence || 0;
+                player.damageReduction -= oldItem.explicitStats.damage_reduction || 0; // Removing old item's DR
+                player.health -= oldItem.explicitStats.health || 0; // Removing old item's health stat
             }
             
             player.equipment[slot] = item;
@@ -491,13 +568,17 @@
             player.dexterity += item.implicitStats.dexterity || 0;
             player.recovery += item.implicitStats.recovery || 0;
             player.intelligence += item.implicitStats.intelligence || 0;
+            player.damageReduction += item.implicitStats.damage_reduction || 0; // Adding new item's DR
+            player.health += item.implicitStats.health || 0; // Adding new item's health stat
             
             player.strength += item.explicitStats.strength || 0;
             player.dexterity += item.explicitStats.dexterity || 0;
             player.recovery += item.explicitStats.recovery || 0;
             player.intelligence += item.explicitStats.intelligence || 0;
+            player.damageReduction += item.explicitStats.damage_reduction || 0; // Adding new item's DR
+            player.health += item.explicitStats.health || 0; // Adding new item's health stat
             
-            player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
+            player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3) + (player.health);
             player.health = player.maxHealth;
             player.maxMana = baseMana + (player.intelligence * 2);
             player.mana = player.maxMana;
@@ -621,10 +702,12 @@
             }
             if (explicitMods > 0) {
                 statsHtml += `<p class="font-bold mt-2">Explicit Modifiers:</p>`;
-                const explicitModsHtml = Object.keys(item.explicitStats).map(stat => {
-                    return `<p>${statAbbreviations[stat]} +${item.explicitStats[stat]} (T${item.tier} ${item.statRange.min}-${item.statRange.max})</p>`;
-                }).join('');
-                statsHtml += explicitModsHtml;
+                for (const stat in item.explicitStats) {
+                    // Display the tier and stat range for each individual explicit modifier
+                    const statRange = statTierRanges[stat] ? statTierRanges[stat][item.tier] : null;
+                    const rangeDisplay = statRange ? `(T${item.tier} ${statRange.min}-${statRange.max})` : '';
+                    statsHtml += `<p>${statAbbreviations[stat]} +${item.explicitStats[stat]} ${rangeDisplay}</p>`;
+                }
             }
             itemStatsEl.innerHTML = statsHtml;
             
@@ -651,6 +734,8 @@
             playerDexEl.textContent = `DEX: ${player.dexterity}`;
             playerRecEl.textContent = `REC: ${player.recovery}`;
             playerIntEl.textContent = `INT: ${player.intelligence}`;
+            // Added new display for Damage Reduction
+            playerDrEl.textContent = `DR: ${player.damageReduction}`;
             playerLevelEl.textContent = `Level: ${player.level} (${player.xp}/${player.xpToNextLevel} XP)`;
             
             if (player.skillPoints > 0) {
@@ -677,6 +762,8 @@
             enemyDexEl.textContent = `DEX: ${enemy.dexterity}`;
             enemyRecEl.textContent = `REC: ${enemy.recovery}`;
             enemyIntEl.textContent = `INT: ${enemy.intelligence}`;
+            // Added new display for Enemy Damage Reduction
+            enemyDrEl.textContent = `DR: ${enemy.damageReduction}`;
             enemyLevelEl.textContent = `Level: ${enemy.level}`;
             
             const enemyMinDamage = enemy.baseMinDamage + enemy.strength;
@@ -720,14 +807,10 @@
                 enemyHealthEl.classList.add('text-red-400');
             }
             
-            const getItemTooltipText = (stats, item) => {
+            const getItemTooltipText = (stats) => {
                 let tooltip = '';
                 for (const stat in stats) {
-                    tooltip += `${statAbbreviations[stat]} +${stats[stat]}`;
-                    if (item.explicitStats[stat]) {
-                        tooltip += ` (T${item.tier} ${item.statRange.min}-${item.statRange.max})`;
-                    }
-                    tooltip += `\n`;
+                    tooltip += `${statAbbreviations[stat]} +${stats[stat]}\n`;
                 }
                 return tooltip;
             };
@@ -735,8 +818,8 @@
             const getItemText = (item) => {
                 if (!item) return 'Empty';
                 let tooltip = '';
-                const implicitMods = getItemTooltipText(item.implicitStats, item);
-                const explicitMods = getItemTooltipText(item.explicitStats, item);
+                const implicitMods = getItemTooltipText(item.implicitStats);
+                const explicitMods = getItemTooltipText(item.explicitStats);
 
                 if (implicitMods.length > 0) {
                     tooltip += `Implicit Modifiers:\n${implicitMods}`;
@@ -744,7 +827,9 @@
                 if (explicitMods.length > 0) {
                     tooltip += `Explicit Modifiers:\n${explicitMods}`;
                 }
-                return `<span class="${rarities[item.rarity]} hover:underline cursor-pointer" title="${tooltip.trim()}">${item.name}</span>`;
+                // Only use the first word of the item's name for display to prevent redundancy.
+                const itemName = item.name.split(' ')[0];
+                return `<span class="${rarities[item.rarity]} hover:underline cursor-pointer" title="${tooltip.trim()}">${itemName}</span>`;
             };
 
             helmetSlotEl.innerHTML = `Helmet: ${getItemText(player.equipment.helmet)}`;
@@ -769,6 +854,7 @@
                 dexterity: 0,
                 recovery: 0,
                 intelligence: 0,
+                damageReduction: 0, // Added new stat to player
                 level: 1,
                 xp: 0,
                 xpToNextLevel: 10,
@@ -785,12 +871,14 @@
                     shield: null,
                 }
             };
-            player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
-            player.health = player.maxHealth;
+            player.health = baseHealth; // Initializing with base health
+            player.maxHealth = baseHealth; // Initializing with base health
             player.maxMana = baseMana + (player.intelligence * 2);
             player.mana = player.maxMana;
             
-            enemy = createEnemy();
+            // Set the enemy's level to 1 at the start of a new game.
+            currentEnemyLevel = 1;
+            enemy = createEnemy(currentEnemyLevel);
             
             gameLogEl.innerHTML = '';
             logMessage('<p>Welcome, brave <span class="text-green-500 font-bold">Hero</span>. An <span class="text-red-400 font-bold">Enemy</span> stands in your way!</p>');
@@ -804,7 +892,9 @@
         function startNextBattle() {
             player.health = player.maxHealth;
             player.mana = player.maxMana;
-            enemy = createEnemy();
+            
+            // The enemy's level no longer increments, but is still passed to createEnemy
+            enemy = createEnemy(currentEnemyLevel);
 
             gameLogEl.innerHTML = '';
             logMessage('<p>A new <span class="text-red-400 font-bold">enemy</span> appears!</p>');
@@ -816,18 +906,20 @@
         }
 
         function addItemForTesting() {
-            const droppedItem = getRandomItem('helmet');
+            // Item generation is now based on the current enemy's level
+            const droppedItem = getRandomItem();
             if (droppedItem) {
                 logMessage(`You found a new item!`);
                 showItemFoundModal(droppedItem);
             }
         }
 
+        // The addRecovery function now only adds to maxHealth, as requested
         function addStrength() {
             if (player.skillPoints > 0) {
                 player.strength++;
                 player.skillPoints--;
-                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
+                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3) + (player.health);
                 player.health = player.maxHealth;
                 updateUI();
             }
@@ -845,7 +937,7 @@
             if (player.skillPoints > 0) {
                 player.recovery++;
                 player.skillPoints--;
-                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
+                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3) + (player.health);
                 player.health = player.maxHealth;
                 updateUI();
             }
