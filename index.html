@@ -32,7 +32,7 @@
                 </p>
                 <!-- Player Stats with Skill Point Buttons -->
                 <div class="flex items-center gap-2">
-                    <p id="player-str" title="+1 to Min Dmg, +1 to Max Dmg, +2 HP">STR: 0</p>
+                    <p id="player-str" title="+1 to Min Dmg, +1 to Max Dmg, +1 HP">STR: 0</p>
                     <button id="add-str" class="hidden text-white bg-blue-500 hover:bg-blue-600 rounded-full h-5 w-5 text-xs font-bold transition duration-200 leading-none">+</button>
                 </div>
                 <div class="flex items-center gap-2">
@@ -68,7 +68,7 @@
                 <p id="enemy-attack-range">
                     Attack: 1-4 (90%)
                 </p>
-                <p id="enemy-str" title="+1 to Min Dmg, +1 to Max Dmg, +2 HP">STR: 0</p>
+                <p id="enemy-str" title="+1 to Min Dmg, +1 to Max Dmg, +1 HP">STR: 0</p>
                 <p id="enemy-dex" title="+2% to Accuracy">DEX: 0</p>
                 <p id="enemy-rec" title="+3 HP">REC: 0</p>
                 <p id="enemy-int" title="No effect yet">INT: 0</p>
@@ -113,9 +113,21 @@
         <div id="item-found-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
             <div class="bg-gray-800 p-8 rounded-lg text-center shadow-2xl w-full max-w-sm">
                 <h2 class="text-3xl font-bold mb-4">Item Found!</h2>
-                <h3 id="item-name" class="text-xl font-bold mb-2 text-white"></h3>
-                <div id="item-stats" class="text-sm mb-4"></div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="flex justify-between items-start gap-4 text-left">
+                    <!-- Equipped Item -->
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-gray-400 mb-2">Equipped Item</h3>
+                        <p id="equipped-item-name" class="text-sm text-white"></p>
+                        <div id="equipped-item-stats" class="text-xs text-gray-300"></div>
+                    </div>
+                    <!-- New Item -->
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-white mb-2">New Item</h3>
+                        <p id="item-name" class="text-sm text-white"></p>
+                        <div id="item-stats" class="text-xs text-gray-300"></div>
+                    </div>
+                </div>
+                <div class="mt-8 grid grid-cols-2 gap-4">
                     <button id="equip-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
                         Equip
                     </button>
@@ -302,8 +314,8 @@
                 availableStats.splice(randomStatIndex, 1);
                 
                 // Use the stat-specific tier ranges
-                const statRange = getStatRange(randomStat, tier);
-                const statValue = statRange.min + Math.floor(Math.random() * (statRange.max - statRange.min + 1));
+                const statRangeForRoll = getStatRange(randomStat, tier);
+                const statValue = statRangeForRoll.min + Math.floor(Math.random() * (statRangeForRoll.max - statRangeForRoll.min + 1));
                 
                 explicitStats[randomStat] = statValue;
             }
@@ -315,8 +327,7 @@
                 slot: slot,
                 implicitStats: implicitStats,
                 explicitStats: explicitStats,
-                tier: tier,
-                statRange: statRange
+                tier: tier
             };
         }
 
@@ -403,6 +414,8 @@
         const itemFoundModal = document.getElementById('item-found-modal');
         const itemNameEl = document.getElementById('item-name');
         const itemStatsEl = document.getElementById('item-stats');
+        const equippedItemNameEl = document.getElementById('equipped-item-name');
+        const equippedItemStatsEl = document.getElementById('equipped-item-stats');
         const equipButton = document.getElementById('equip-button');
         const discardButton = document.getElementById('discard-button');
         
@@ -424,7 +437,8 @@
                 player.xpToNextLevel = player.level * 10;
                 logMessage(`<span class="text-green-500 font-bold">Hero</span> has reached Level ${player.level}! You gained 2 skill points!`);
                 
-                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3);
+                // Recalculate max health and mana after level up
+                player.maxHealth = baseHealth + (player.strength * 1) + (player.recovery * 3) + player.bonusHealth;
                 player.health = player.maxHealth;
                 player.maxMana = baseMana + (player.intelligence * 2);
                 player.mana = player.maxMana;
@@ -479,8 +493,8 @@
                 intelligence: enemyIntelligence,
                 damageReduction: enemyDamageReduction, // Initialized new stat
                 level: enemyLevel,
-                health: baseHP + (enemyStrength * 2) + (enemyRecovery * 3),
-                maxHealth: baseHP + (enemyStrength * 2) + (enemyRecovery * 3),
+                health: baseHP + (enemyStrength * 1) + (enemyRecovery * 3),
+                maxHealth: baseHP + (enemyStrength * 1) + (enemyRecovery * 3),
                 mana: enemyMana,
                 maxMana: enemyMaxMana,
                 baseMinDamage: enemyBaseMinDamage,
@@ -548,38 +562,42 @@
             const oldItem = player.equipment[slot];
             
             if (oldItem) {
+                // Remove all bonuses from the old item
                 player.strength -= oldItem.implicitStats.strength || 0;
                 player.dexterity -= oldItem.implicitStats.dexterity || 0;
                 player.recovery -= oldItem.implicitStats.recovery || 0;
                 player.intelligence -= oldItem.implicitStats.intelligence || 0;
-                player.damageReduction -= oldItem.implicitStats.damage_reduction || 0; // Removing old item's DR
-                player.health -= oldItem.implicitStats.health || 0; // Removing old item's health stat
+                player.damageReduction -= oldItem.implicitStats.damage_reduction || 0; 
+                player.bonusHealth -= oldItem.implicitStats.health || 0; 
                 
                 player.strength -= oldItem.explicitStats.strength || 0;
                 player.dexterity -= oldItem.explicitStats.dexterity || 0;
                 player.recovery -= oldItem.explicitStats.recovery || 0;
                 player.intelligence -= oldItem.explicitStats.intelligence || 0;
-                player.damageReduction -= oldItem.explicitStats.damage_reduction || 0; // Removing old item's DR
-                player.health -= oldItem.explicitStats.health || 0; // Removing old item's health stat
+                player.damageReduction -= oldItem.explicitStats.damage_reduction || 0; 
+                player.bonusHealth -= oldItem.explicitStats.health || 0;
             }
             
+            // Add all bonuses from the new item
             player.equipment[slot] = item;
             player.strength += item.implicitStats.strength || 0;
             player.dexterity += item.implicitStats.dexterity || 0;
             player.recovery += item.implicitStats.recovery || 0;
             player.intelligence += item.implicitStats.intelligence || 0;
-            player.damageReduction += item.implicitStats.damage_reduction || 0; // Adding new item's DR
-            player.health += item.implicitStats.health || 0; // Adding new item's health stat
+            player.damageReduction += item.implicitStats.damage_reduction || 0; 
+            player.bonusHealth += item.implicitStats.health || 0; 
             
             player.strength += item.explicitStats.strength || 0;
             player.dexterity += item.explicitStats.dexterity || 0;
             player.recovery += item.explicitStats.recovery || 0;
             player.intelligence += item.explicitStats.intelligence || 0;
-            player.damageReduction += item.explicitStats.damage_reduction || 0; // Adding new item's DR
-            player.health += item.explicitStats.health || 0; // Adding new item's health stat
+            player.damageReduction += item.explicitStats.damage_reduction || 0; 
+            player.bonusHealth += item.explicitStats.health || 0; 
             
-            player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3) + (player.health);
-            player.health = player.maxHealth;
+            // Recalculate max health and mana
+            player.maxHealth = baseHealth + (player.strength * 1) + (player.recovery * 3) + player.bonusHealth;
+            // Restore player health to the new max health if it's currently higher than the previous max
+            player.health = Math.min(player.health, player.maxHealth);
             player.maxMana = baseMana + (player.intelligence * 2);
             player.mana = player.maxMana;
             
@@ -686,14 +704,56 @@
             actionButtonsContainer.classList.remove('hidden');
         }
 
+        // Updated function to show a comparison between the equipped item and the new item
         function showItemFoundModal(item) {
+            const equippedItem = player.equipment[item.slot];
+
+            // Update equipped item display
+            if (equippedItem) {
+                equippedItemNameEl.textContent = equippedItem.name;
+                equippedItemNameEl.className = `text-sm font-bold ${rarities[equippedItem.rarity]}`;
+                let equippedStatsHtml = '';
+                const equippedImplicitMods = Object.keys(equippedItem.implicitStats).length;
+                const equippedExplicitMods = Object.keys(equippedItem.explicitStats).length;
+                if (equippedImplicitMods > 0) {
+                    equippedStatsHtml += `<p class="font-bold">Implicit Modifiers:</p>`;
+                    for (const stat in equippedItem.implicitStats) {
+                        equippedStatsHtml += `<p>${statAbbreviations[stat]} +${equippedItem.implicitStats[stat]}</p>`;
+                    }
+                }
+                if (equippedExplicitMods > 0) {
+                    equippedStatsHtml += `<p class="font-bold mt-2">Explicit Modifiers:</p>`;
+                    for (const stat in equippedItem.explicitStats) {
+                         const statRange = statTierRanges[stat] ? statTierRanges[stat][equippedItem.tier] : null;
+                        const rangeDisplay = statRange ? `(T${equippedItem.tier} ${statRange.min}-${statRange.max})` : '';
+                        equippedStatsHtml += `<p>${statAbbreviations[stat]} +${equippedItem.explicitStats[stat]} ${rangeDisplay}</p>`;
+                    }
+                }
+                equippedItemStatsEl.innerHTML = equippedStatsHtml;
+
+            } else {
+                equippedItemNameEl.textContent = 'None';
+                equippedItemNameEl.className = 'text-sm font-bold text-gray-400';
+                equippedItemStatsEl.innerHTML = '';
+            }
+
+            // Update new item display
             itemNameEl.textContent = item.name;
-            itemNameEl.className = `text-xl font-bold mb-2 ${rarities[item.rarity]}`;
+            itemNameEl.className = `text-sm font-bold ${rarities[item.rarity]}`;
             
             let statsHtml = '';
             const implicitMods = Object.keys(item.implicitStats).length;
             const explicitMods = Object.keys(item.explicitStats).length;
             
+            // Get the correct stat range based on the stat name and tier
+            const getStatRange = (statName, tier) => {
+                const statRanges = statTierRanges[statName];
+                if (statRanges && statRanges[tier]) {
+                    return statRanges[tier];
+                }
+                return { min: 1, max: 1 }; // Fallback for undefined tiers or stats
+            };
+
             if (implicitMods > 0) {
                 statsHtml += `<p class="font-bold">Implicit Modifiers:</p>`;
                 for (const stat in item.implicitStats) {
@@ -704,7 +764,7 @@
                 statsHtml += `<p class="font-bold mt-2">Explicit Modifiers:</p>`;
                 for (const stat in item.explicitStats) {
                     // Display the tier and stat range for each individual explicit modifier
-                    const statRange = statTierRanges[stat] ? statTierRanges[stat][item.tier] : null;
+                    const statRange = getStatRange(stat, item.tier);
                     const rangeDisplay = statRange ? `(T${item.tier} ${statRange.min}-${statRange.max})` : '';
                     statsHtml += `<p>${statAbbreviations[stat]} +${item.explicitStats[stat]} ${rangeDisplay}</p>`;
                 }
@@ -855,6 +915,7 @@
                 recovery: 0,
                 intelligence: 0,
                 damageReduction: 0, // Added new stat to player
+                bonusHealth: 0, // New stat for health bonuses from items
                 level: 1,
                 xp: 0,
                 xpToNextLevel: 10,
@@ -919,7 +980,8 @@
             if (player.skillPoints > 0) {
                 player.strength++;
                 player.skillPoints--;
-                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3) + (player.health);
+                // Correct calculation for max health
+                player.maxHealth = baseHealth + (player.strength * 1) + (player.recovery * 3) + player.bonusHealth;
                 player.health = player.maxHealth;
                 updateUI();
             }
@@ -937,7 +999,8 @@
             if (player.skillPoints > 0) {
                 player.recovery++;
                 player.skillPoints--;
-                player.maxHealth = baseHealth + (player.strength * 2) + (player.recovery * 3) + (player.health);
+                // Correct calculation for max health
+                player.maxHealth = baseHealth + (player.strength * 1) + (player.recovery * 3) + player.bonusHealth;
                 player.health = player.maxHealth;
                 updateUI();
             }
